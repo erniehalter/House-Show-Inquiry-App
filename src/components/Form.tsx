@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { calculatePrice, formatCurrency, loadPricingFromCSV } from '../utils/calculatePrice';
 import { getDistanceTier, getTravelInfo } from '../utils/distances';
-import { STATES, STATE_NAMES } from '../data/states';
+import { STATES, STATE_NAMES, type DistanceTier } from '../data/states';
 import { EventType } from '../data/pricing';
 
 export default function Form() {
@@ -23,7 +23,7 @@ export default function Form() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [csvPricing, setCsvPricing] = useState<Record<EventType, Record<0 | 1 | 2 | 3, number>> | null>(null);
+  const [csvPricing, setCsvPricing] = useState<Record<EventType, Record<DistanceTier, number>> | null>(null);
 
   // Load pricing from CSV on component mount
   useEffect(() => {
