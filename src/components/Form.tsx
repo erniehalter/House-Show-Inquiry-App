@@ -24,6 +24,14 @@ export default function Form() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  // Auto-select weekend and evening when unsure of date
+  useEffect(() => {
+    if (eventCategory === 'houseshow' && dateUnsure && !dayOfWeek && !timeSelection) {
+      setDayOfWeek('weekend');
+      setTimeSelection('evening');
+    }
+  }, [dateUnsure, eventCategory, dayOfWeek, timeSelection]);
+
   // Determine the final eventType based on selections
   const getEventType = (): EventType | '' => {
     if (eventCategory === 'wedding') {
@@ -382,21 +390,6 @@ export default function Form() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Will your event be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                  timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                }`}>
-                  <input
-                    type="radio"
-                    name="timeSelection"
-                    value="daytime"
-                    checked={timeSelection === 'daytime'}
-                    onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
-                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                  />
-                  <span className="ml-3 block text-sm font-medium text-gray-900">
-                    Daytime
-                  </span>
-                </label>
-                <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
                   timeSelection === 'evening' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
                 }`}>
                   <input
@@ -411,6 +404,21 @@ export default function Form() {
                     Evening
                   </span>
                 </label>
+                <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                  timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="timeSelection"
+                    value="daytime"
+                    checked={timeSelection === 'daytime'}
+                    onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
+                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                  />
+                  <span className="ml-3 block text-sm font-medium text-gray-900">
+                    Daytime
+                  </span>
+                </label>
               </div>
             </div>
           )}
@@ -421,21 +429,6 @@ export default function Form() {
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Is it a weekend or weekday? *</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                    dayOfWeek === 'weekday' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="dayOfWeek"
-                      value="weekday"
-                      checked={dayOfWeek === 'weekday'}
-                      onChange={(e) => setDayOfWeek(e.target.value as 'weekday')}
-                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                    />
-                    <span className="ml-3 block text-sm font-medium text-gray-900">
-                      Weekday
-                    </span>
-                  </label>
                   <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
                     dayOfWeek === 'weekend' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
                   }`}>
@@ -451,6 +444,21 @@ export default function Form() {
                       Weekend
                     </span>
                   </label>
+                  <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                    dayOfWeek === 'weekday' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="dayOfWeek"
+                      value="weekday"
+                      checked={dayOfWeek === 'weekday'}
+                      onChange={(e) => setDayOfWeek(e.target.value as 'weekday')}
+                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    />
+                    <span className="ml-3 block text-sm font-medium text-gray-900">
+                      Weekday
+                    </span>
+                  </label>
                 </div>
               </div>
 
@@ -458,21 +466,6 @@ export default function Form() {
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Will it be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                      timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="timeSelectionUnsure"
-                        value="daytime"
-                        checked={timeSelection === 'daytime'}
-                        onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
-                        className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                      />
-                      <span className="ml-3 block text-sm font-medium text-gray-900">
-                        Daytime
-                      </span>
-                    </label>
                     <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
                       timeSelection === 'evening' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
                     }`}>
@@ -486,6 +479,21 @@ export default function Form() {
                       />
                       <span className="ml-3 block text-sm font-medium text-gray-900">
                         Evening
+                      </span>
+                    </label>
+                    <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                      timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="timeSelectionUnsure"
+                        value="daytime"
+                        checked={timeSelection === 'daytime'}
+                        onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
+                        className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <span className="ml-3 block text-sm font-medium text-gray-900">
+                        Daytime
                       </span>
                     </label>
                   </div>
