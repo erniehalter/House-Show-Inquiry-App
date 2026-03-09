@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { calculatePrice, formatCurrency } from '../utils/calculatePrice';
+import { calculatePrice, formatCurrency, loadPricingFromCSV } from '../utils/calculatePrice';
 import { getDistanceTier, getTravelInfo } from '../utils/distances';
 import { STATES, STATE_NAMES } from '../data/states';
 import { EventType } from '../data/pricing';
@@ -23,6 +23,17 @@ export default function Form() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [csvPricing, setCsvPricing] = useState<Record<EventType, Record<0 | 1 | 2 | 3, number>> | null>(null);
+
+  // Load pricing from CSV on component mount
+  useEffect(() => {
+    loadPricingFromCSV()
+      .then(pricing => setCsvPricing(pricing))
+      .catch(err => {
+        console.warn('Could not load CSV pricing, using hardcoded defaults:', err);
+        setCsvPricing(null);
+      });
+  }, []);
 
   // Auto-select weekend and evening when unsure of date
   useEffect(() => {
@@ -66,14 +77,14 @@ export default function Form() {
   useEffect(() => {
     const eventType = getEventType();
     if (formData.state && eventType) {
-      setPrice(calculatePrice(formData.state, eventType as EventType));
+      setPrice(calculatePrice(formData.state, eventType as EventType, csvPricing ?? undefined));
     } else if (eventCategory === 'wedding' && formData.state) {
       // Wedding price shows regardless
-      setPrice(calculatePrice(formData.state, 'Wedding'));
+      setPrice(calculatePrice(formData.state, 'Wedding', csvPricing ?? undefined));
     } else {
       setPrice(null);
     }
-  }, [formData.state, eventCategory, formData.eventDate, dateUnsure, timeSelection, dayOfWeek]);
+  }, [formData.state, eventCategory, formData.eventDate, dateUnsure, timeSelection, dayOfWeek, csvPricing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
