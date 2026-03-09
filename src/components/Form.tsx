@@ -16,6 +16,7 @@ export default function Form() {
   });
 
   const [eventCategory, setEventCategory] = useState<'houseshow' | 'wedding' | ''>('');
+  const [weddingType, setWeddingType] = useState<EventType | ''>('');
   const [dateUnsure, setDateUnsure] = useState(false);
   const [timeSelection, setTimeSelection] = useState<'daytime' | 'evening' | ''>('');
   const [dayOfWeek, setDayOfWeek] = useState<'weekday' | 'weekend' | ''>('');
@@ -46,9 +47,9 @@ export default function Form() {
   // Determine the final eventType based on selections
   const getEventType = (): EventType | '' => {
     if (eventCategory === 'wedding') {
-      return 'Wedding';
+      return weddingType;
     }
-    
+
     if (eventCategory === 'houseshow') {
       if (formData.eventDate && !dateUnsure) {
         // Has a specific date - need to ask about time
@@ -78,13 +79,10 @@ export default function Form() {
     const eventType = getEventType();
     if (formData.state && eventType) {
       setPrice(calculatePrice(formData.state, eventType as EventType, csvPricing ?? undefined));
-    } else if (eventCategory === 'wedding' && formData.state) {
-      // Wedding price shows regardless
-      setPrice(calculatePrice(formData.state, 'Wedding', csvPricing ?? undefined));
     } else {
       setPrice(null);
     }
-  }, [formData.state, eventCategory, formData.eventDate, dateUnsure, timeSelection, dayOfWeek, csvPricing]);
+  }, [formData.state, eventCategory, weddingType, formData.eventDate, dateUnsure, timeSelection, dayOfWeek, csvPricing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -143,6 +141,7 @@ export default function Form() {
         notes: ''
       });
       setEventCategory('');
+      setWeddingType('');
       setDateUnsure(false);
       setTimeSelection('');
       setDayOfWeek('');
@@ -157,11 +156,11 @@ export default function Form() {
 
   const isFormValid = () => {
     const baseValid = formData.firstName && formData.lastName && formData.email && formData.city && formData.state && eventCategory;
-    
+
     if (eventCategory === 'wedding') {
-      return baseValid;
+      return baseValid && weddingType;
     }
-    
+
     if (eventCategory === 'houseshow') {
       if (!dateUnsure && !formData.eventDate) {
         return false;
@@ -316,6 +315,7 @@ export default function Form() {
                   checked={eventCategory === 'houseshow'}
                   onChange={(e) => {
                     setEventCategory(e.target.value as 'houseshow');
+                    setWeddingType('');
                     setDateUnsure(false);
                     setFormData(prev => ({ ...prev, eventDate: '' }));
                     setTimeSelection('');
@@ -337,6 +337,7 @@ export default function Form() {
                   checked={eventCategory === 'wedding'}
                   onChange={(e) => {
                     setEventCategory(e.target.value as 'wedding');
+                    setWeddingType('');
                     setDateUnsure(false);
                     setFormData(prev => ({ ...prev, eventDate: '' }));
                     setTimeSelection('');
@@ -350,6 +351,38 @@ export default function Form() {
               </label>
             </div>
           </div>
+
+          {/* Wedding Type Selection */}
+          {eventCategory === 'wedding' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">What type of wedding service? *</label>
+              <div className="space-y-3">
+                {[
+                  { value: 'Wedding Ceremony (1 hour)', label: 'Ceremony (1 hour)' },
+                  { value: 'Wedding Cocktail (1-2 hours)', label: 'Cocktail Reception (1-2 hours)' },
+                  { value: 'Wedding Dinner Reception (2-3 hours)', label: 'Dinner Reception (2-3 hours)' },
+                  { value: 'Wedding Ceremony + Cocktail Reception', label: 'Ceremony + Cocktail Reception' },
+                  { value: 'Wedding 3-Piece Band (4 hours)', label: '3-Piece Band (4 hours)' }
+                ].map((option) => (
+                  <label key={option.value} className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                    weddingType === option.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="weddingType"
+                      value={option.value}
+                      checked={weddingType === option.value}
+                      onChange={(e) => setWeddingType(e.target.value as EventType)}
+                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    />
+                    <span className="ml-3 block text-sm font-medium text-gray-900">
+                      {option.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Travel Info for House Shows */}
           {eventCategory === 'houseshow' && formData.state && (
