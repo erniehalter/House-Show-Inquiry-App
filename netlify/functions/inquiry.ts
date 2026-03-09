@@ -13,14 +13,17 @@ interface InquiryRequest {
   travelInfo: string;
 }
 
-export default async (req: any, context: any) => {
+export const handler = async (event: any) => {
   // Only allow POST requests
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method not allowed" })
+    };
   }
 
   try {
-    const body: InquiryRequest = JSON.parse(req.body);
+    const body: InquiryRequest = JSON.parse(event.body);
     const {
       firstName,
       lastName,
@@ -99,23 +102,21 @@ Reply to this guest directly at: ${email}
       console.log("✅ Emails sent successfully to guest and Ernie");
     } else {
       console.log("⚠️  SMTP_URL not configured. Emails will not be sent.");
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Email service not configured" })
+      };
     }
 
-    return new Response(
-      JSON.stringify({ success: true, message: "Inquiry sent successfully" }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true, message: "Inquiry sent successfully" })
+    };
   } catch (error) {
     console.error("Error processing inquiry:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: "Failed to process inquiry" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ success: false, error: "Failed to process inquiry" })
+    };
   }
 };

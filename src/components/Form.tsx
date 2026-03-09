@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { STATES, STATE_NAMES, getDistanceTier } from '../data/states';
-import { EVENT_TYPES, EventType } from '../data/pricing';
+import { useState, useEffect } from 'react';
 import { calculatePrice, formatCurrency } from '../utils/calculatePrice';
+import { getDistanceTier, getTravelInfo } from '../utils/distances';
+import { STATES, STATE_NAMES } from '../data/states';
+import { EventType } from '../data/pricing';
 
 export default function Form() {
   const [formData, setFormData] = useState({
@@ -10,55 +11,81 @@ export default function Form() {
     email: '',
     city: '',
     state: '',
-    eventType: '' as EventType | '',
+    eventDate: '',
     notes: ''
   });
 
   const [eventCategory, setEventCategory] = useState<'houseshow' | 'wedding' | ''>('');
+  const [timeSelection, setTimeSelection] = useState<'daytime' | 'evening' | 'unsure' | ''>('');
+  const [dayOfWeek, setDayOfWeek] = useState<'weekday' | 'weekend' | ''>('');
   const [price, setPrice] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  // Determine the final eventType based on selections
+  const getEventType = (): EventType | '' => {
+    if (eventCategory === 'wedding') {
+      return 'Wedding';
+    }
+    
+    if (eventCategory === 'houseshow') {
+      if (timeSelection === 'daytime') {
+        return 'House Show - Standard';
+      }
+      if (timeSelection === 'evening') {
+        return 'House Show - Evening';
+      }
+      if (timeSelection === 'unsure' && dayOfWeek === 'weekday') {
+        return 'House Show - Standard';
+      }
+      if (timeSelection === 'unsure' && dayOfWeek === 'weekend') {
+        // Still need to wait for time selection
+        return '';
+      }
+    }
+    
+    return '';
+  };
+
   useEffect(() => {
-    if (formData.state && formData.eventType) {
-      setPrice(calculatePrice(formData.state, formData.eventType as EventType));
+    const eventType = getEventType();
+    if (formData.state && eventType) {
+      setPrice(calculatePrice(formData.state, eventType as EventType));
     } else {
       setPrice(null);
     }
-  }, [formData.state, formData.eventType]);
+  }, [formData.state, eventCategory, timeSelection, dayOfWeek]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const getRelevantEventTypes = (): EventType[] => {
-    if (eventCategory === 'houseshow') {
-      return EVENT_TYPES.filter(type =>
-        type === 'Weekend Evening (Friday-Sunday)' || type === 'All Other Times'
-      );
-    } else if (eventCategory === 'wedding') {
-      return EVENT_TYPES.filter(type =>
-        type.includes('Wedding')
-      );
-    }
-    return [];
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
     try {
+      const eventType = getEventType();
       const response = await fetch('/api/inquiry', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          city: formData.city,
+          state: formData.state,
+          eventType: eventType,
+          eventDate: formData.eventDate,
+          notes: formData.notes,
           price: price ? formatCurrency(price) : 'N/A',
           distanceTier: formData.state ? getDistanceTier(formData.state) : 'Unknown',
           travelInfo: getTravelInfo(formData.state)
@@ -70,56 +97,70 @@ export default function Form() {
       }
 
       setIsSuccess(true);
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        city: '',
+        state: '',
+        eventDate: '',
+        notes: ''
+      });
+      setEventCategory('');
+      setTimeSelection('');
+      setDayOfWeek('');
+      setPrice(null);
     } catch (err) {
       setError('There was an error submitting your inquiry. Please try again.');
+      console.error('Error:', err);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getTravelInfo = (state: string) => {
-    if (!state) return '';
-    return "I'll bring my Bose PA system—great for house shows to events with 300-400 people.";
+  const isFormValid = () => {
+    const baseValid = formData.firstName && formData.lastName && formData.email && formData.city && formData.state && eventCategory;
+    
+    if (eventCategory === 'wedding') {
+      return baseValid;
+    }
+    
+    if (eventCategory === 'houseshow') {
+      if (timeSelection === '' || timeSelection === 'unsure' && dayOfWeek === '') {
+        return false;
+      }
+      if (timeSelection === 'unsure' && dayOfWeek === 'weekend') {
+        // Still waiting for final time selection
+        return false;
+      }
+      return baseValid && getEventType() !== '';
+    }
+    
+    return false;
   };
 
   if (isSuccess) {
     return (
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center max-w-2xl mx-auto mt-12">
-        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Thanks {formData.firstName}!</h2>
-        <p className="text-gray-600 text-lg mb-8">
-          Your inquiry has been sent to Ernie.<br />
-          He'll get back to you shortly at <span className="font-medium text-gray-900">{formData.email}</span>.
-        </p>
-
-        {price !== null && (
-          <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-center mb-8">
-            <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Estimated Price</h4>
-            <div>
-              <div className="text-5xl font-bold text-gray-900 tracking-tight mb-2">
-                {formatCurrency(price)}
-              </div>
-              <div className="text-sm text-gray-500">
-                50% deposit ({formatCurrency(price / 2)}) required to confirm booking
-              </div>
-            </div>
+      <div className="max-w-2xl mx-auto p-6 text-center">
+        <div className="mb-4 flex justify-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
           </div>
-        )}
+        </div>
+        <h2 className="text-3xl font-bold mb-2">Thanks {formData.firstName}!</h2>
+        <p className="text-gray-700 mb-4">Your inquiry has been sent to Ernie.</p>
+        <p className="text-gray-700 mb-6">He'll get back to you shortly at <strong>{formData.email}</strong>.</p>
+        
+        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6">
+          <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Estimated Price</h4>
+          <div className="text-5xl font-bold text-gray-900 mb-4">{formatCurrency(price || 0)}</div>
+        </div>
 
         <button
-          onClick={() => {
-            setIsSuccess(false);
-            setEventCategory('');
-            setFormData({
-              firstName: '', lastName: '', email: '', city: '', state: '', eventType: '', notes: ''
-            });
-            setPrice(null);
-          }}
-          className="text-indigo-600 hover:text-indigo-800 font-medium"
+          onClick={() => setIsSuccess(false)}
+          className="text-indigo-600 hover:text-indigo-700 font-medium"
         >
           Submit another inquiry
         </button>
@@ -128,15 +169,15 @@ export default function Form() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-100 max-w-5xl mx-auto mt-8">
+    <form onSubmit={handleSubmit}>
       {/* Contact Disclaimer */}
       <div className="border-b border-gray-200 pb-3 mb-6">
-        <p className="text-gray-600 text-xs">
-          <span className="font-medium">Other inquiry?</span> Email <a href="mailto:erniehalter@gmail.com" className="text-indigo-600 hover:underline">erniehalter@gmail.com</a>
+        <p className="text-xs text-gray-600">
+          Other inquiry? Email <a href="mailto:erniehalter@gmail.com" className="text-indigo-600 hover:text-indigo-700">erniehalter@gmail.com</a>
         </p>
       </div>
 
-      {/* Two Column Layout */}
+      {/* Main Grid: Form + Pricing */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-6">
         {/* Left Column: Form Fields */}
         <div className="lg:col-span-2 space-y-8">
@@ -222,6 +263,7 @@ export default function Form() {
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Event Details</h3>
 
+          {/* Event Type Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">What type of event is this? *</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -235,7 +277,8 @@ export default function Form() {
                   checked={eventCategory === 'houseshow'}
                   onChange={(e) => {
                     setEventCategory(e.target.value as 'houseshow');
-                    setFormData(prev => ({ ...prev, eventType: '' }));
+                    setTimeSelection('');
+                    setDayOfWeek('');
                   }}
                   className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                 />
@@ -253,7 +296,8 @@ export default function Form() {
                   checked={eventCategory === 'wedding'}
                   onChange={(e) => {
                     setEventCategory(e.target.value as 'wedding');
-                    setFormData(prev => ({ ...prev, eventType: '' }));
+                    setTimeSelection('');
+                    setDayOfWeek('');
                   }}
                   className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                 />
@@ -264,36 +308,8 @@ export default function Form() {
             </div>
           </div>
 
-          {eventCategory && (
-            <div className="mb-6">
-              <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-2">Event Timing *</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {getRelevantEventTypes().map(type => (
-                  <label
-                    key={type}
-                    className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                      formData.eventType === type ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="eventType"
-                      value={type}
-                      checked={formData.eventType === type}
-                      onChange={handleChange}
-                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                      required
-                    />
-                    <span className="ml-3 block text-sm font-medium text-gray-900">
-                      {type}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {formData.state && (
+          {/* Travel Info for House Shows */}
+          {eventCategory === 'houseshow' && formData.state && (
             <div className="bg-blue-50 p-4 rounded-lg text-blue-800 text-sm mb-6 flex items-start">
               <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -304,6 +320,166 @@ export default function Form() {
             </div>
           )}
 
+          {/* Event Date */}
+          {eventCategory && (
+            <div className="mb-6">
+              <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-1">
+                Event Date {eventCategory === 'wedding' ? '(Optional)' : '*'}
+              </label>
+              <input
+                type="date"
+                id="eventDate"
+                name="eventDate"
+                required={eventCategory === 'houseshow'}
+                value={formData.eventDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+              />
+            </div>
+          )}
+
+          {/* Time Selection for House Shows Only */}
+          {eventCategory === 'houseshow' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Will your event be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                  timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="timeSelection"
+                    value="daytime"
+                    checked={timeSelection === 'daytime'}
+                    onChange={(e) => {
+                      setTimeSelection(e.target.value as 'daytime');
+                      setDayOfWeek('');
+                    }}
+                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                  />
+                  <span className="ml-3 block text-sm font-medium text-gray-900">
+                    Daytime
+                  </span>
+                </label>
+                <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                  timeSelection === 'evening' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="timeSelection"
+                    value="evening"
+                    checked={timeSelection === 'evening'}
+                    onChange={(e) => {
+                      setTimeSelection(e.target.value as 'evening');
+                      setDayOfWeek('');
+                    }}
+                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                  />
+                  <span className="ml-3 block text-sm font-medium text-gray-900">
+                    Evening
+                  </span>
+                </label>
+                <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                  timeSelection === 'unsure' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="timeSelection"
+                    value="unsure"
+                    checked={timeSelection === 'unsure'}
+                    onChange={(e) => {
+                      setTimeSelection(e.target.value as 'unsure');
+                      setDayOfWeek('');
+                    }}
+                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                  />
+                  <span className="ml-3 block text-sm font-medium text-gray-900">
+                    Unsure
+                  </span>
+                </label>
+              </div>
+
+              {/* Follow-up: Weekday/Weekend for Unsure */}
+              {timeSelection === 'unsure' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Is it a weekend or weekday? *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                      dayOfWeek === 'weekday' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="dayOfWeek"
+                        value="weekday"
+                        checked={dayOfWeek === 'weekday'}
+                        onChange={(e) => setDayOfWeek(e.target.value as 'weekday')}
+                        className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <span className="ml-3 block text-sm font-medium text-gray-900">
+                        Weekday
+                      </span>
+                    </label>
+                    <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                      dayOfWeek === 'weekend' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="dayOfWeek"
+                        value="weekend"
+                        checked={dayOfWeek === 'weekend'}
+                        onChange={(e) => setDayOfWeek(e.target.value as 'weekend')}
+                        className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <span className="ml-3 block text-sm font-medium text-gray-900">
+                        Weekend
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Follow-up: Time of day for unsure weekend */}
+                  {dayOfWeek === 'weekend' && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Will it be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                          timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="unsureWeekendTime"
+                            value="daytime"
+                            checked={timeSelection === 'daytime'}
+                            onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
+                            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                          />
+                          <span className="ml-3 block text-sm font-medium text-gray-900">
+                            Daytime
+                          </span>
+                        </label>
+                        <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                          timeSelection === 'evening' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="unsureWeekendTime"
+                            value="evening"
+                            checked={timeSelection === 'evening'}
+                            onChange={(e) => setTimeSelection(e.target.value as 'evening')}
+                            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                          />
+                          <span className="ml-3 block text-sm font-medium text-gray-900">
+                            Evening
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notes */}
           <div>
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Anything else I should know? (Optional)</label>
             <textarea
@@ -317,12 +493,11 @@ export default function Form() {
             />
           </div>
         </div>
-
         </div>
 
         {/* Right Column: Pricing (Sticky) */}
         <div className="lg:col-span-1">
-          <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 text-center lg:sticky lg:top-8">
+          <div className="p-6 text-center sticky top-32 max-h-96">
             <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Estimated Price</h4>
             {price !== null ? (
               <div>
@@ -337,7 +512,7 @@ export default function Form() {
               </div>
             ) : (
               <div className="text-sm text-gray-600 py-3">
-                Select state & timing
+                Select all details to see price
               </div>
             )}
           </div>
@@ -352,12 +527,8 @@ export default function Form() {
 
       <button
         type="submit"
-        disabled={isSubmitting || !formData.state || !formData.eventType || !eventCategory}
-        className={`w-full py-4 px-6 rounded-xl text-white font-medium text-lg transition-all shadow-md
-          ${(isSubmitting || !formData.state || !formData.eventType || !eventCategory)
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg active:transform active:scale-[0.99]'
-          }`}
+        disabled={isSubmitting || !isFormValid()}
+        className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-colors"
       >
         {isSubmitting ? 'Submitting...' : 'Submit Inquiry'}
       </button>

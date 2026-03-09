@@ -4,7 +4,11 @@
       "Bash(npm install)",
       "mcp__Claude_Preview__preview_start",
       "Bash(\"/Users/erniehalter/Desktop/PythonApps/House Show:*)",
-      "Bash(grep -r \"smtp\\\\|gmail\\\\|email\\\\|credentials\" \"/Users/erniehalter/Desktop/PythonApps/House Show Inquiry App\" --include=\"*.ts\" --include=\"*.js\" --include=\"*.json\" --include=\"*.env*\" --include=\"*.md\" ! -path \"*/node_modules/*\")"
+      "Bash(grep -r \"smtp\\\\|gmail\\\\|email\\\\|credentials\" \"/Users/erniehalter/Desktop/PythonApps/House Show Inquiry App\" --include=\"*.ts\" --include=\"*.js\" --include=\"*.json\" --include=\"*.env*\" --include=\"*.md\" ! -path \"*/node_modules/*\")",
+      "Bash(netlify sites:list)",
+      "Bash(netlify sites:create --name ernie-event-request)",
+      "Bash(npm run build)",
+      "Bash(netlify deploy --prod)"
     ]
   }
 }
