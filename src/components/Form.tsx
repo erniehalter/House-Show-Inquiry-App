@@ -16,7 +16,8 @@ export default function Form() {
   });
 
   const [eventCategory, setEventCategory] = useState<'houseshow' | 'wedding' | ''>('');
-  const [timeSelection, setTimeSelection] = useState<'daytime' | 'evening' | 'unsure' | ''>('');
+  const [dateUnsure, setDateUnsure] = useState(false);
+  const [timeSelection, setTimeSelection] = useState<'daytime' | 'evening' | ''>('');
   const [dayOfWeek, setDayOfWeek] = useState<'weekday' | 'weekend' | ''>('');
   const [price, setPrice] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,18 +31,24 @@ export default function Form() {
     }
     
     if (eventCategory === 'houseshow') {
-      if (timeSelection === 'daytime') {
-        return 'House Show - Standard';
-      }
-      if (timeSelection === 'evening') {
-        return 'House Show - Evening';
-      }
-      if (timeSelection === 'unsure' && dayOfWeek === 'weekday') {
-        return 'House Show - Standard';
-      }
-      if (timeSelection === 'unsure' && dayOfWeek === 'weekend') {
-        // Still need to wait for time selection
-        return '';
+      if (formData.eventDate && !dateUnsure) {
+        // Has a specific date - need to ask about time
+        if (timeSelection === 'daytime') {
+          return 'House Show - Standard';
+        }
+        if (timeSelection === 'evening') {
+          return 'House Show - Evening';
+        }
+      } else if (dateUnsure) {
+        // Unsure of date - asked about weekday/weekend
+        if (dayOfWeek === 'weekday') {
+          if (timeSelection === 'daytime') return 'House Show - Standard';
+          if (timeSelection === 'evening') return 'House Show - Evening';
+        }
+        if (dayOfWeek === 'weekend') {
+          if (timeSelection === 'daytime') return 'House Show - Standard';
+          if (timeSelection === 'evening') return 'House Show - Evening';
+        }
       }
     }
     
@@ -52,10 +59,13 @@ export default function Form() {
     const eventType = getEventType();
     if (formData.state && eventType) {
       setPrice(calculatePrice(formData.state, eventType as EventType));
+    } else if (eventCategory === 'wedding' && formData.state) {
+      // Wedding price shows regardless
+      setPrice(calculatePrice(formData.state, 'Wedding'));
     } else {
       setPrice(null);
     }
-  }, [formData.state, eventCategory, timeSelection, dayOfWeek]);
+  }, [formData.state, eventCategory, formData.eventDate, dateUnsure, timeSelection, dayOfWeek]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -63,6 +73,13 @@ export default function Form() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleDateUnsure = () => {
+    setDateUnsure(!dateUnsure);
+    setFormData(prev => ({ ...prev, eventDate: '' }));
+    setTimeSelection('');
+    setDayOfWeek('');
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -84,7 +101,7 @@ export default function Form() {
           city: formData.city,
           state: formData.state,
           eventType: eventType,
-          eventDate: formData.eventDate,
+          eventDate: formData.eventDate || 'Unsure',
           notes: formData.notes,
           price: price ? formatCurrency(price) : 'N/A',
           distanceTier: formData.state ? getDistanceTier(formData.state) : 'Unknown',
@@ -107,6 +124,7 @@ export default function Form() {
         notes: ''
       });
       setEventCategory('');
+      setDateUnsure(false);
       setTimeSelection('');
       setDayOfWeek('');
       setPrice(null);
@@ -126,14 +144,16 @@ export default function Form() {
     }
     
     if (eventCategory === 'houseshow') {
-      if (timeSelection === '' || timeSelection === 'unsure' && dayOfWeek === '') {
+      if (!dateUnsure && !formData.eventDate) {
         return false;
       }
-      if (timeSelection === 'unsure' && dayOfWeek === 'weekend') {
-        // Still waiting for final time selection
+      if (formData.eventDate && !dateUnsure && !timeSelection) {
         return false;
       }
-      return baseValid && getEventType() !== '';
+      if (dateUnsure && (!dayOfWeek || !timeSelection)) {
+        return false;
+      }
+      return baseValid;
     }
     
     return false;
@@ -153,7 +173,7 @@ export default function Form() {
         <p className="text-gray-700 mb-4">Your inquiry has been sent to Ernie.</p>
         <p className="text-gray-700 mb-6">He'll get back to you shortly at <strong>{formData.email}</strong>.</p>
         
-        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6">
+        <div className="p-6 rounded-xl mb-6">
           <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Estimated Price</h4>
           <div className="text-5xl font-bold text-gray-900 mb-4">{formatCurrency(price || 0)}</div>
         </div>
@@ -277,6 +297,8 @@ export default function Form() {
                   checked={eventCategory === 'houseshow'}
                   onChange={(e) => {
                     setEventCategory(e.target.value as 'houseshow');
+                    setDateUnsure(false);
+                    setFormData(prev => ({ ...prev, eventDate: '' }));
                     setTimeSelection('');
                     setDayOfWeek('');
                   }}
@@ -296,6 +318,8 @@ export default function Form() {
                   checked={eventCategory === 'wedding'}
                   onChange={(e) => {
                     setEventCategory(e.target.value as 'wedding');
+                    setDateUnsure(false);
+                    setFormData(prev => ({ ...prev, eventDate: '' }));
                     setTimeSelection('');
                     setDayOfWeek('');
                   }}
@@ -320,29 +344,43 @@ export default function Form() {
             </div>
           )}
 
-          {/* Event Date */}
+          {/* Event Date Section */}
           {eventCategory && (
             <div className="mb-6">
-              <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-1">
-                Event Date {eventCategory === 'wedding' ? '(Optional)' : '*'}
-              </label>
-              <input
-                type="date"
-                id="eventDate"
-                name="eventDate"
-                required={eventCategory === 'houseshow'}
-                value={formData.eventDate}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700">
+                  Event Date {eventCategory === 'wedding' ? '(Optional)' : '*'}
+                </label>
+                {eventCategory === 'houseshow' && (
+                  <button
+                    type="button"
+                    onClick={handleDateUnsure}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    {dateUnsure ? 'Know the date?' : 'Unsure of date?'}
+                  </button>
+                )}
+              </div>
+              
+              {!dateUnsure && (
+                <input
+                  type="date"
+                  id="eventDate"
+                  name="eventDate"
+                  required={eventCategory === 'houseshow'}
+                  value={formData.eventDate}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                />
+              )}
             </div>
           )}
 
-          {/* Time Selection for House Shows Only */}
-          {eventCategory === 'houseshow' && (
+          {/* Time Selection for House Shows with Specific Date */}
+          {eventCategory === 'houseshow' && formData.eventDate && !dateUnsure && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Will your event be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
                   timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
                 }`}>
@@ -351,10 +389,7 @@ export default function Form() {
                     name="timeSelection"
                     value="daytime"
                     checked={timeSelection === 'daytime'}
-                    onChange={(e) => {
-                      setTimeSelection(e.target.value as 'daytime');
-                      setDayOfWeek('');
-                    }}
+                    onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
                     className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                   />
                   <span className="ml-3 block text-sm font-medium text-gray-900">
@@ -369,114 +404,94 @@ export default function Form() {
                     name="timeSelection"
                     value="evening"
                     checked={timeSelection === 'evening'}
-                    onChange={(e) => {
-                      setTimeSelection(e.target.value as 'evening');
-                      setDayOfWeek('');
-                    }}
+                    onChange={(e) => setTimeSelection(e.target.value as 'evening')}
                     className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                   />
                   <span className="ml-3 block text-sm font-medium text-gray-900">
                     Evening
                   </span>
                 </label>
-                <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                  timeSelection === 'unsure' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                }`}>
-                  <input
-                    type="radio"
-                    name="timeSelection"
-                    value="unsure"
-                    checked={timeSelection === 'unsure'}
-                    onChange={(e) => {
-                      setTimeSelection(e.target.value as 'unsure');
-                      setDayOfWeek('');
-                    }}
-                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                  />
-                  <span className="ml-3 block text-sm font-medium text-gray-900">
-                    Unsure
-                  </span>
-                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Time Selection for House Shows Unsure of Date */}
+          {eventCategory === 'houseshow' && dateUnsure && (
+            <>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Is it a weekend or weekday? *</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                    dayOfWeek === 'weekday' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="dayOfWeek"
+                      value="weekday"
+                      checked={dayOfWeek === 'weekday'}
+                      onChange={(e) => setDayOfWeek(e.target.value as 'weekday')}
+                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    />
+                    <span className="ml-3 block text-sm font-medium text-gray-900">
+                      Weekday
+                    </span>
+                  </label>
+                  <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
+                    dayOfWeek === 'weekend' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="dayOfWeek"
+                      value="weekend"
+                      checked={dayOfWeek === 'weekend'}
+                      onChange={(e) => setDayOfWeek(e.target.value as 'weekend')}
+                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                    />
+                    <span className="ml-3 block text-sm font-medium text-gray-900">
+                      Weekend
+                    </span>
+                  </label>
+                </div>
               </div>
 
-              {/* Follow-up: Weekday/Weekend for Unsure */}
-              {timeSelection === 'unsure' && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Is it a weekend or weekday? *</label>
+              {dayOfWeek && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Will it be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                      dayOfWeek === 'weekday' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                      timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
                     }`}>
                       <input
                         type="radio"
-                        name="dayOfWeek"
-                        value="weekday"
-                        checked={dayOfWeek === 'weekday'}
-                        onChange={(e) => setDayOfWeek(e.target.value as 'weekday')}
+                        name="timeSelectionUnsure"
+                        value="daytime"
+                        checked={timeSelection === 'daytime'}
+                        onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
                         className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                       />
                       <span className="ml-3 block text-sm font-medium text-gray-900">
-                        Weekday
+                        Daytime
                       </span>
                     </label>
                     <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                      dayOfWeek === 'weekend' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                      timeSelection === 'evening' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
                     }`}>
                       <input
                         type="radio"
-                        name="dayOfWeek"
-                        value="weekend"
-                        checked={dayOfWeek === 'weekend'}
-                        onChange={(e) => setDayOfWeek(e.target.value as 'weekend')}
+                        name="timeSelectionUnsure"
+                        value="evening"
+                        checked={timeSelection === 'evening'}
+                        onChange={(e) => setTimeSelection(e.target.value as 'evening')}
                         className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                       />
                       <span className="ml-3 block text-sm font-medium text-gray-900">
-                        Weekend
+                        Evening
                       </span>
                     </label>
                   </div>
-
-                  {/* Follow-up: Time of day for unsure weekend */}
-                  {dayOfWeek === 'weekend' && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Will it be primarily daytime (ends before 3 PM) or evening (after 3 PM)? *</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                          timeSelection === 'daytime' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                        }`}>
-                          <input
-                            type="radio"
-                            name="unsureWeekendTime"
-                            value="daytime"
-                            checked={timeSelection === 'daytime'}
-                            onChange={(e) => setTimeSelection(e.target.value as 'daytime')}
-                            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                          />
-                          <span className="ml-3 block text-sm font-medium text-gray-900">
-                            Daytime
-                          </span>
-                        </label>
-                        <label className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                          timeSelection === 'evening' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                        }`}>
-                          <input
-                            type="radio"
-                            name="unsureWeekendTime"
-                            value="evening"
-                            checked={timeSelection === 'evening'}
-                            onChange={(e) => setTimeSelection(e.target.value as 'evening')}
-                            className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                          />
-                          <span className="ml-3 block text-sm font-medium text-gray-900">
-                            Evening
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Notes */}
