@@ -134,6 +134,10 @@ const guestEmailTemplate = (firstName: string, eventType: string, city: string, 
         Estimated Price: ${price}
       </div>
 
+      <p style="font-size: 0.875rem; color: #6b7280; margin: 1rem 0;">
+        <em>This estimate includes travel costs for continental US locations.</em>
+      </p>
+
       <p>Ernie will review your inquiry and get back to you shortly to discuss next steps, confirm availability, and answer any questions you may have.</p>
 
       <div class="signature">
@@ -288,7 +292,8 @@ const ernieEmailTemplate = (firstName: string, lastName: string, email: string, 
         Quoted Price: ${price}
       </div>
       <div class="details-box">
-        <p style="margin: 0; color: #6b7280; font-size: 0.875rem;"><strong>Travel Info:</strong><br>${travelInfo}</p>
+        <p style="margin: 0.5rem 0; color: #6b7280; font-size: 0.875rem;"><strong>Travel Info:</strong><br>${travelInfo}</p>
+        <p style="margin: 0.5rem 0; color: #6b7280; font-size: 0.875rem;"><em>Note: This price includes travel costs for continental US locations.</em></p>
       </div>
 
       <div class="reply-box">
