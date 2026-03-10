@@ -428,7 +428,36 @@ export default function Form() {
                   name="eventDate"
                   required={eventCategory === 'houseshow'}
                   value={formData.eventDate}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Handle both YYYY-MM-DD (from calendar) and MM/DD/YY (manual typing)
+                    if (val === '') {
+                      setFormData(prev => ({ ...prev, eventDate: '' }));
+                    } else if (val.includes('-') && val.length === 10) {
+                      // Calendar picker format: YYYY-MM-DD
+                      setFormData(prev => ({ ...prev, eventDate: val }));
+                    } else if (val.includes('/') && val.length >= 8) {
+                      // Manual entry: MM/DD/YY or MM/DD/YYYY
+                      const parts = val.split('/');
+                      if (parts.length === 3) {
+                        const mm = parts[0].padStart(2, '0');
+                        const dd = parts[1].padStart(2, '0');
+                        let yy = parts[2];
+                        // Handle both YY and YYYY formats
+                        if (yy.length === 2) {
+                          const fullYear = parseInt(yy) < 50 ? '20' + yy : '19' + yy;
+                          yy = fullYear;
+                        }
+                        const fullDate = `${yy}-${mm}-${dd}`;
+                        setFormData(prev => ({ ...prev, eventDate: fullDate }));
+                      } else {
+                        setFormData(prev => ({ ...prev, eventDate: val }));
+                      }
+                    } else {
+                      setFormData(prev => ({ ...prev, eventDate: val }));
+                    }
+                  }}
+                  placeholder="MM/DD/YY"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                 />
               )}
