@@ -44,6 +44,13 @@ export default function Form() {
     }
   }, [dateUnsure, eventCategory, dayOfWeek, timeSelection]);
 
+  // Auto-select evening when a specific date is entered for house shows
+  useEffect(() => {
+    if (eventCategory === 'houseshow' && formData.eventDate && !dateUnsure && !timeSelection) {
+      setTimeSelection('evening');
+    }
+  }, [formData.eventDate, dateUnsure, eventCategory, timeSelection]);
+
   // Determine the final eventType based on selections
   const getEventType = (): EventType | '' => {
     if (eventCategory === 'wedding') {
@@ -416,12 +423,29 @@ export default function Form() {
               
               {!dateUnsure && (
                 <input
-                  type="date"
+                  type="text"
                   id="eventDate"
                   name="eventDate"
                   required={eventCategory === 'houseshow'}
-                  value={formData.eventDate}
-                  onChange={handleChange}
+                  value={formData.eventDate ? `${formData.eventDate.substring(5, 7)}-${formData.eventDate.substring(8)}-${formData.eventDate.substring(2, 4)}` : ''}
+                  placeholder="MM-DD-YY (e.g., 03-15-25)"
+                  pattern="\d{2}-\d{2}-\d{2}"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || val.match(/^\d{0,2}(?:-\d{0,2})?(?:-\d{0,2})?$/)) {
+                      if (val.length === 8 && val.match(/^\d{2}-\d{2}-\d{2}$/)) {
+                        // Valid MM-DD-YY format, convert to YYYY-MM-DD
+                        const mm = val.substring(0, 2);
+                        const dd = val.substring(3, 5);
+                        const yy = val.substring(6, 8);
+                        const fullYear = parseInt(yy) < 50 ? '20' + yy : '19' + yy;
+                        const fullDate = fullYear + '-' + mm + '-' + dd;
+                        setFormData(prev => ({ ...prev, eventDate: fullDate }));
+                      } else {
+                        setFormData(prev => ({ ...prev, eventDate: val }));
+                      }
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                 />
               )}
