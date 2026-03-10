@@ -607,11 +607,18 @@ export default function Form() {
                 <div className="text-5xl font-bold text-gray-900 tracking-tight mb-4">
                   {formatCurrency(price)}
                 </div>
-                {formData.state && ['AK', 'HI', 'Outside The US'].includes(formData.state) && (
-                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                    Note: Flight costs not included in pricing
-                  </div>
-                )}
+                <div className="space-y-2">
+                  {formData.state && !['AK', 'HI', 'Outside The US'].includes(formData.state) && (
+                    <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-2">
+                      Includes travel costs
+                    </div>
+                  )}
+                  {formData.state && ['AK', 'HI', 'Outside The US'].includes(formData.state) && (
+                    <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                      Note: Flight costs not included in pricing
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="text-sm text-gray-600 py-3">

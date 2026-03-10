@@ -62,21 +62,29 @@ export function calculatePrice(
   csvPricing?: Record<EventType, Record<DistanceTier, number>>
 ): number {
   const tier = getDistanceTier(state);
+  let price: number;
 
   // For House Show - Standard, derive from evening price at 80% (20% reduction)
   if (eventType === 'House Show - Standard') {
     const eveningPrice = csvPricing
       ? csvPricing['House Show - Evening'][tier]
       : PRICING_TABLE['House Show - Evening'][tier];
-    return Math.round(eveningPrice * 0.8);
+    price = Math.round(eveningPrice * 0.8);
+  } else {
+    // Use CSV pricing if available, otherwise fall back to hardcoded
+    if (csvPricing) {
+      price = csvPricing[eventType][tier];
+    } else {
+      price = PRICING_TABLE[eventType][tier];
+    }
   }
 
-  // Use CSV pricing if available, otherwise fall back to hardcoded
-  if (csvPricing) {
-    return csvPricing[eventType][tier];
-  }
+  // Round to nearest $25
+  return roundToNearest25(price);
+}
 
-  return PRICING_TABLE[eventType][tier];
+export function roundToNearest25(amount: number): number {
+  return Math.round(amount / 25) * 25;
 }
 
 export function formatCurrency(amount: number): string {
