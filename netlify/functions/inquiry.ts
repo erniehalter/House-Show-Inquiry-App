@@ -348,15 +348,16 @@ export const handler = async (event: any) => {
 
       // Send confirmation email to the guest
       await transporter.sendMail({
-        from: '"Ernie Halter Music" <noreply@erniehalter.com>',
+        from: '"Ernie Halter Music" <erniehalter@gmail.com>',
         to: email,
         subject: `Booking Inquiry Received - Estimated Price: ${price}`,
-        html: guestEmailTemplate(firstName, eventType, city, state, price, notes)
+        html: guestEmailTemplate(firstName, eventType, city, state, price, notes),
+        replyTo: "erniehalter@gmail.com"
       });
 
       // Send inquiry details email to Ernie
       await transporter.sendMail({
-        from: '"Booking System" <noreply@erniehalter.com>',
+        from: '"Booking System" <erniehalter@gmail.com>',
         to: "erniehalter@gmail.com",
         replyTo: email,
         subject: `New Booking Inquiry from ${firstName} ${lastName}`,
