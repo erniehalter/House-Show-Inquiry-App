@@ -423,29 +423,12 @@ export default function Form() {
               
               {!dateUnsure && (
                 <input
-                  type="text"
+                  type="date"
                   id="eventDate"
                   name="eventDate"
                   required={eventCategory === 'houseshow'}
-                  value={formData.eventDate ? `${formData.eventDate.substring(5, 7)}-${formData.eventDate.substring(8)}-${formData.eventDate.substring(2, 4)}` : ''}
-                  placeholder="MM-DD-YY (e.g., 03-15-25)"
-                  pattern="\d{2}-\d{2}-\d{2}"
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '' || val.match(/^\d{0,2}(?:-\d{0,2})?(?:-\d{0,2})?$/)) {
-                      if (val.length === 8 && val.match(/^\d{2}-\d{2}-\d{2}$/)) {
-                        // Valid MM-DD-YY format, convert to YYYY-MM-DD
-                        const mm = val.substring(0, 2);
-                        const dd = val.substring(3, 5);
-                        const yy = val.substring(6, 8);
-                        const fullYear = parseInt(yy) < 50 ? '20' + yy : '19' + yy;
-                        const fullDate = fullYear + '-' + mm + '-' + dd;
-                        setFormData(prev => ({ ...prev, eventDate: fullDate }));
-                      } else {
-                        setFormData(prev => ({ ...prev, eventDate: val }));
-                      }
-                    }
-                  }}
+                  value={formData.eventDate}
+                  onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                 />
               )}
