@@ -599,6 +599,7 @@ export default function Form() {
             />
           </div>
         </div>
+      </div>
 
       {/* Pricing Section at Bottom */}
       <div className="p-6 text-center bg-gray-50 border border-gray-200 rounded-lg mb-6">
