@@ -21,6 +21,7 @@ export default function Form() {
   const [timeSelection, setTimeSelection] = useState<'daytime' | 'evening' | ''>('');
   const [dayOfWeek, setDayOfWeek] = useState<'weekday' | 'weekend' | ''>('');
   const [price, setPrice] = useState<number | null>(null);
+  const [submittedPrice, setSubmittedPrice] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -137,6 +138,7 @@ export default function Form() {
         throw new Error('Failed to submit inquiry');
       }
 
+      setSubmittedPrice(price);
       setIsSuccess(true);
       setFormData({
         firstName: '',
@@ -200,11 +202,14 @@ export default function Form() {
         
         <div className="p-6 rounded-xl mb-6">
           <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Estimated Price</h4>
-          <div className="text-5xl font-bold text-gray-900 mb-4">{formatCurrency(price || 0)}</div>
+          <div className="text-5xl font-bold text-gray-900 mb-4">{formatCurrency(submittedPrice || 0)}</div>
         </div>
 
         <button
-          onClick={() => setIsSuccess(false)}
+          onClick={() => {
+            setIsSuccess(false);
+            setSubmittedPrice(null);
+          }}
           className="text-indigo-600 hover:text-indigo-700 font-medium"
         >
           Submit another inquiry
@@ -598,9 +603,9 @@ export default function Form() {
         </div>
         </div>
 
-        {/* Right Column: Pricing (Sticky) */}
+        {/* Right Column: Pricing (Fixed) */}
         <div className="lg:col-span-1">
-          <div className="p-6 text-center sticky top-32 max-h-96">
+          <div className="p-6 text-center fixed right-6 top-32 w-72 bg-white rounded-lg shadow-lg">
             <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Estimated Price</h4>
             {price !== null ? (
               <div>
