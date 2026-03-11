@@ -60,8 +60,7 @@ Event Details:
 
 Ernie will review your inquiry and get back to you shortly to discuss next steps and confirm availability.
 
-Best regards,
-Ernie Halter Music
+Cheers!
           `
         });
 
