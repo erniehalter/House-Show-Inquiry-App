@@ -141,9 +141,7 @@ const guestEmailTemplate = (firstName: string, eventType: string, city: string, 
       <p>Ernie will review your inquiry and get back to you shortly to discuss next steps, confirm availability, and answer any questions you may have.</p>
 
       <div class="signature">
-        <p>Best regards,<br>
-        <strong>Ernie Halter</strong><br>
-        <em>Musician & Performer</em></p>
+        <p>Cheers!</p>
       </div>
 
       <div class="footer-text">
